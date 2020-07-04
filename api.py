@@ -3,105 +3,9 @@ from . import operations
 import datetime
 import json
 from enum import Enum
-from abc import abstractmethod
 import re
 import os
 import json
-
-endpoints = {}
-
-class PathPart:
-	@abstractmethod
-	def matches(self, pathpart):
-		pass
-
-	@abstractmethod
-	def parameters(self, string):
-		pass
-
-class PathVar:
-	def __init__(self, var):
-		self.var = var[1:-1]
-	
-	def matches(self, string):
-		return True
-
-	def parameters(self, string):
-		return { self.var: string }
-	
-	def __eq__(self, other):
-		return self.var == other.var
-
-	def __hash__(self):
-		return hash(self.var)
-
-class PathConst:
-	def __init__(self, const):
-		self.const = const
-
-	def matches(self, string):
-		return self.const == string
-	
-	def parameters(self, string):
-		return {}
-
-	def __eq__(self, other):
-		return self.const == other.const
-
-	def __hash__(self):
-		return hash(self.const)
-
-class Endpoint:
-	var_matcher = re.compile("<[^>]+>")
-
-	def __init__(self, endpoint_string):
-		path_parts = endpoint_string.split("/")[1:]
-		self.path = []
-		for path_part in path_parts:
-			if self.is_path_var(path_part):
-				self.path.append(PathVar(path_part))
-			else:
-				self.path.append(PathConst(path_part))
-
-	@staticmethod
-	def is_path_var(pathpart):
-		return Endpoint.var_matcher.match(pathpart) is not None
-
-	def matches(self, path):
-		path_parts = path.split("/")[1:]
-		
-		if len(self.path) !=  len(path_parts):
-			return False
-
-		return all(self.path[i].matches(path_parts[i]) for i in range(len(self.path)))
-
-	def parameters(self, string):
-		params = {}
-		path_parts = string.split("/")[1:]
-		
-		for sub_path, path_part in zip(self.path, path_parts):
-			params.update(sub_path.parameters(path_part))
-
-		return params
-
-	def __eq__(self, other):
-		if len(self.path) != len(other.path):
-			return False
-
-		else:
-			return all(self.path[i] == other.path[i] for i in range(len(self.path)))
-	
-	def __hash__(self):
-		return sum(hash(path_part) for path_part in self.path)
-
-def register_endpoint(path, content_type):
-	def wrap(f):
-		endpoint = Endpoint(path)
-		endpoints[endpoint] = (f, content_type)
-
-		return f
-	
-	return wrap
 
 def get_academic_year(meeting_date):
 	if meeting_date.month >= 6:
@@ -171,7 +75,6 @@ def add_semester_markers(records, year):
 
 	return records
 
-@register_endpoint("/attendance_record/<attendee>", "json")
 def get_attendance_information(attendee):
 	options = {
 		"attendee": attendee
@@ -314,26 +217,3 @@ def get_pretty_attendance_record(attendee):
 	return response
 
 
-if "PATH_INFO" in os.environ:
-	path = os.environ["PATH_INFO"]
-else:
-	path = "/attendance_record/pretty/gshay"
-
-
-for endpoint in endpoints:
-	if endpoint.matches(path):
-		params = endpoint.parameters(path)
-		func, content_type = endpoints[endpoint]
-		response = func(**params)
-		if content_type == "json":
-			print("Content-type: application/json\n")
-			print(json.dumps(response))
-		elif content_type == "html":
-			print("Content-type: text/html\n")
-			print(response)
-		break
-
-
-
-#if __name__ == "__main__":
-#	r = get_attendance_information("gshay")
