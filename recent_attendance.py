@@ -1,7 +1,7 @@
 import os
-from minutes_parse_utils import FORMATS, get_attendance, add_to_db
-from operations import get_meeting_dates
-from logging import log
+from .minutes_parse_utils import FORMATS, get_attendance, add_to_db
+from .operations import get_meeting_dates
+from .logging import log
 
 minutes_path = '/afs/sipb/admin/minutes'
 

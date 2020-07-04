@@ -1,6 +1,7 @@
+import os
 import json
 import mysql.connector
-from logging import log
+from .logging import log
 
 # Flag to disable writing to database (for debugging purposes)
 NO_WRITE_DB = False
@@ -9,7 +10,9 @@ NO_WRITE_DB = False
 # Contains values:
 #	- user
 #	- password
-with open("db_auth.json", "r") as f:
+db_auth_file = "db_auth.json"
+db_auth_file = os.path.join(os.path.dirname(__file__), db_auth_file)
+with open(db_auth_file, "r") as f:
 	db_auth = json.load(f)
 
 # Connect to database

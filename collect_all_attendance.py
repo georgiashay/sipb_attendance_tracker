@@ -1,8 +1,8 @@
 import os
 import re
 import datetime
-from minutes_parse_utils import FORMATS, get_members_and_keyholders, get_attendance, add_to_db
-from operations import add_attendance_record
+from .minutes_parse_utils import FORMATS, get_members_and_keyholders, get_attendance, add_to_db
+from .operations import add_attendance_record
 
 # Path to minutes
 minutes_path = '/afs/sipb.mit.edu/admin/minutes'

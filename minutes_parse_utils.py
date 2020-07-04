@@ -4,9 +4,9 @@ import re
 import os
 import json
 import datetime
-from preprocessing_exceptions import process_exception
-from operations import add_attendance_record
-from logging import log
+from .preprocessing_exceptions import process_exception
+from .operations import add_attendance_record
+from .logging import log
 
 # File that lists members (keyholders) and prospectives (members)
 members_path = '/afs/sipb.mit.edu/admin/text/members/members_and_prospectives'

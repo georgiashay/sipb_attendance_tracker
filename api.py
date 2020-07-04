@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import operations
+from . import operations
 import datetime
 import json
 from enum import Enum
