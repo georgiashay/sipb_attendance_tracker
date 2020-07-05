@@ -163,3 +163,15 @@ def get_meeting_dates(options=None):
 	# Meeting date is first value in tuple returned from database
 	return [row["meeting_date"] for row in rows]
 
+def get_attendees(options=None):
+	"""
+	Get list of attendees based on a dictionary of options
+	"""
+
+	# Selects attendees from databse
+	query = "SELECT attendee FROM attendance GROUP BY attendee;"
+	where_clause, values = construct_where_clause(options)
+	query += where_clause
+
+	rows = get_data(query, values)
+	return [row["attendee"] for row in rows]
