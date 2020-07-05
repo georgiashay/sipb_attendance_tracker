@@ -94,8 +94,13 @@ def construct_where_clause(options):
 
 	# Construct where clause and values list from options
 	if "attendee" in options:
-		selectors.append("attendee = %(attendee)s")
-		values["attendee"] = options["attendee"]
+		if isinstance(options["attendee"], list):
+			selectors.append("attendee IN (" + ", ".join(["%(attendee_" + str(n) + ")s" for n in range(len(options["attendee"]))]) + ")")
+			for i, attendee in enumerate(options["attendee"]):
+				values["attendee_" + str(i)] = attendee
+		elif isinstance(options["attendee"], str):
+			selectors.append("attendee = %(attendee)s")
+			values["attendee"] = options["attendee"]
 	if "start_date" in options:
 		selectors.append("meeting_date >= %(start_date)s")
 		values["start_date"] = options["start_date"]

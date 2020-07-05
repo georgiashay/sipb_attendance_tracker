@@ -77,8 +77,15 @@ def add_semester_markers(records, year):
 	return records
 
 def get_attendance_information(attendee):
+	members, keyholders, aliases = get_members_and_keyholders()
+	attendee_names = [attendee]
+	if attendee in aliases:
+		attendee_names.append(aliases[attendee])
+	elif attendee in aliases.values():
+		attendee_names.extend(alias for alias in aliases if aliases[alias] == attendee)
+	
 	options = {
-		"attendee": attendee
+		"attendee": attendee_names
 	}
 
 	clauses = [
