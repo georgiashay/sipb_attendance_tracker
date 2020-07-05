@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 from . import operations
+from .minutes_parse_utils import get_members_and_keyholders
 import datetime
 import json
 from enum import Enum
@@ -202,3 +203,20 @@ def is_active(attendance_record):
 		return True
 	else:
 		return False
+
+def get_num_meetings_attended(attendance_record):
+	all_attendance = [record for year in attendance_record for record in attendance_record[year] if record["type"] == "meeting" and record["attended"]]
+	return len(all_attendance)
+
+def get_attendee_type(attendee):
+	members, keyholders, aliases = get_members_and_keyholders()
+	if attendee in keyholders:
+		return "keyholder"
+	elif attendee in aliases:
+		if aliases[attendee] in keyholders:
+			return "keyholder"
+		elif aliases[attendee] in members:
+			return "member"
+	elif attendee in members:
+		return "member"
+	return "guest"
