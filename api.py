@@ -133,7 +133,14 @@ def get_attendance_information(attendee):
 					'attended': record[1]
 				})
 
-	return json_records
+	return {
+		"record": json_records,
+		"summary": attendance_summary(json_records),
+		"by_month": split_by_month(json_records),
+		"active": is_active(json_records),
+		"total_attended": get_num_meetings_attended(json_records),
+		"attendee_type": get_attendee_type(attendee)
+	}
 
 term_names = ["SUMMER", "FALL", "IAP", "SPRING"]
 
@@ -227,3 +234,9 @@ def get_attendee_type(attendee):
 	elif attendee in members:
 		return "member"
 	return "guest"
+
+def get_all_attendance_records():
+	members, keyholders, aliases = get_members_and_keyholders()
+	attendees = operations.get_attendees()
+	records = {}
+
