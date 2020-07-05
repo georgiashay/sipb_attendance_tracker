@@ -246,4 +246,3 @@ def get_all_attendance_records():
 		if aliases[alias] in records:
 			records[alias] = records[aliases[alias]]
 	return [{'attendee': attendee, **records[attendee]} for attendee in records]
-	
