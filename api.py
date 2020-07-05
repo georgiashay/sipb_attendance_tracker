@@ -135,7 +135,7 @@ def attendance_percent(attendance_list):
 	if total_meetings != 0:
 		percent = str(round((attended*100)/total_meetings, 1)) + "%"
 	else:
-		percent = "N/A%"
+		percent = "N/A"
 	return (attended, total_meetings, percent)
 
 def percent_string(percent_tuple):
@@ -147,7 +147,7 @@ def combine_percents(pt1, pt2):
 	if total_meetings != 0:
 		percent = str(round((attended * 100)/total_meetings, 1)) + "%"
 	else:
-		percent = "N/A%"
+		percent = "N/A"
 	return (attended, total_meetings, percent)
 
 def attendance_summary(attendance_information):
@@ -172,48 +172,25 @@ def attendance_summary(attendance_information):
 		summary[year] = by_term
 	return summary
 
-semester_colors = {
-	"SUMMER": ("lemonchiffon", "gold"),
-	"FALL": ("navajowhite", "coral"),
-	"IAP": ("thistle", "mediumslateblue"),
-	"SPRING": ("#C7E884", "limegreen")
-}
-
-@register_endpoint("/attendance_record/pretty/<attendee>", "html")
-def get_pretty_attendance_record(attendee):
-	attendance_record = get_attendance_information(attendee)
-	summary = attendance_summary(attendance_record)
-	years = sorted(list(attendance_record.keys()))
-	
-	response = "<html>\n"
-	for year in years:
-		response += "<h3>" + year + "</h3>\n"
-		response += "<p>Overall: " + percent_string(summary[year]["all"]) + "</p>"
-		response += "<p>Academic Year: " + percent_string(combine_percents(summary[year]["FALL"], summary[year]["SPRING"])) + "</p>"
-		response += "<p>Summer: " + percent_string(summary[year]["SUMMER"]) + "</p>"
-		response += "<p>Fall: " + percent_string(summary[year]["FALL"]) + "</p>"
-		response += "<p>IAP: " + percent_string(summary[year]["IAP"]) + "</p>"
-		response += "<p>Spring: " + percent_string(summary[year]["SPRING"]) + "</p>"
-		response += "<table border='1'>\n"
-		response += "<tr>\n"
-		color = ("lightgray", "gray")
+def split_by_month(attendance_record):
+	term = "NONE"
+	years = {}
+	for year in attendance_record:
+		months = {}
 		for record in attendance_record[year]:
 			if record["type"] == "marker":
 				sem, marker_type = record["name"].split("_")
-				if marker_type == "END": 
-					color = ("lightgray", "gray")
+				if marker_type == "END":
+					term = "NONE"
 				else:
-					color = semester_colors[sem]
+					term = sem
 			else:
-				response += "<td width='16' bgcolor='" + color[record["attended"]] + "'>\n"
-				if record["attended"]:
-					response += "P\n"
+				month = datetime.datetime.strptime(record["date"], "%Y-%m-%d").date().month
+				if month in months:
+					months[month].append({**record, "term": term})
 				else:
-					response += "A\n"
-				response += "</td>\n"
-		response += "</tr>\n"
-		response += "</table>\n"
-	response += "</html>"
-	return response
+					months[month] = [{**record, "term": term}]
+		years[year] = months
+	return years
 
 
