@@ -194,3 +194,11 @@ def split_by_month(attendance_record):
 	return years
 
 
+def is_active(attendance_record):
+	all_attendance = [record for year in attendance_record for record in attendance_record[year] if record["type"] == "meeting"]
+	active_cutoff = datetime.date.today() - datetime.timedelta(days=30)
+	attendance_after_cutoff = [record for record in all_attendance if datetime.datetime.strptime(record["date"], "%Y-%m-%d").date() >= active_cutoff and record["attended"]]
+	if len(attendance_after_cutoff):
+		return True
+	else:
+		return False
