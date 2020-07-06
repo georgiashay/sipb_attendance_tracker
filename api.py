@@ -59,25 +59,40 @@ def insert_marker_after(records, date, marker):
 	except:
 		records.append(marker)
 
-def add_semester_markers(records, year):
+def get_semester_bounds(year):
 	january = [datetime.date(year[1], 1, n) for n in range(1, 32)]
 	first_monday = next(day for day in january if day.weekday() == 0)
 	start_of_spring = first_monday + datetime.timedelta(weeks=4)
 	end_of_iap = start_of_spring - datetime.timedelta(days=3)
-	
-	records.insert(0, Marker.SUMMER_START)
-	insert_marker_after(records, datetime.date(year[0], 8, 20), Marker.SUMMER_END)
-	insert_marker_before(records, datetime.date(year[0], 9, 1), Marker.FALL_START)
-	insert_marker_after(records, datetime.date(year[0], 12, 20), Marker.FALL_END)
-	insert_marker_before(records, datetime.date(year[1], 1, 1), Marker.IAP_START)
-	insert_marker_after(records, end_of_iap, Marker.IAP_END)
-	insert_marker_before(records, start_of_spring, Marker.SPRING_START)
-	insert_marker_after(records, datetime.date(year[1], 5, 20), Marker.SPRING_END)
 
+	return {
+		Marker.SUMMER_START: datetime.date(year[0], 6, 1),
+		Marker.SUMMER_END: datetime.date(year[0], 8, 20),
+		Marker.FALL_START: datetime.date(year[0], 9, 1),
+		Marker.FALL_END: datetime.date(year[0], 12, 20),
+		Marker.IAP_START: datetime.date(year[1], 1, 1),
+		Marker.IAP_END: end_of_iap,
+		Marker.SPRING_START: start_of_spring,
+		Marker.SPRING_END: datetime.date(year[1], 5, 20)
+	}
+
+
+def add_semester_markers(records, year):
+	semester_bounds = get_semester_bounds(year)
+	
+	for marker in Marker:
+		if marker.name.endswith("START"):
+			insert_marker_before(records, semester_bounds[marker], marker)
+		else:
+			insert_marker_after(records, semester_bounds[marker], marker)
+	
 	return records
 
-def get_attendance_information(attendee):
-	members, keyholders, aliases = get_members_and_keyholders()
+def get_attendance_information(attendee, mems=None):
+	if mems is None:
+		members, keyholders, aliases = get_members_and_keyholders()
+	else:
+		members, keyholders, aliases = mems
 	attendee_names = [attendee]
 	if attendee in aliases:
 		attendee_names.append(aliases[attendee])
@@ -139,7 +154,7 @@ def get_attendance_information(attendee):
 		"by_month": split_by_month(json_records),
 		"active": is_active(json_records),
 		"total_attended": get_num_meetings_attended(json_records),
-		"attendee_type": get_attendee_type(attendee)
+		"attendee_type": get_attendee_type(attendee, mems=mems)
 	}
 
 term_names = ["SUMMER", "FALL", "IAP", "SPRING"]
@@ -222,8 +237,11 @@ def get_num_meetings_attended(attendance_record):
 	all_attendance = [record for year in attendance_record for record in attendance_record[year] if record["type"] == "meeting" and record["attended"]]
 	return len(all_attendance)
 
-def get_attendee_type(attendee):
-	members, keyholders, aliases = get_members_and_keyholders()
+def get_attendee_type(attendee, mems=None):
+	if mems is None:
+		members, keyholders, aliases = get_members_and_keyholders()
+	else:
+		members, keyholders, aliases = mems
 	if attendee in keyholders:
 		return "keyholder"
 	elif attendee in aliases:
@@ -235,14 +253,87 @@ def get_attendee_type(attendee):
 		return "member"
 	return "guest"
 
-def get_all_attendance_records():
+def get_relevant_semester_range():
+	today = datetime.date.today()
+	if today.month > 9 or today.month == 9 and today.day >= 20:
+		year = (today.year, today.year + 1)
+		semester_bounds = get_semester_bounds(year)
+		return (semester_bounds[Marker.FALL_START], semester_bounds[Marker.FALL_END]), "Fall " + str(year[0])
+	else:
+		year = (today.year - 1, today.year)
+		semester_bounds = get_semester_bounds(year)
+		if today.month > 2 or today.month == 2 and today.day >= 15:
+			return (semester_bounds[Marker.SPRING_START], semester_bounds[Marker.SPRING_END]), "Spring " + str(year[1])
+		else:
+			return (semester_bounds[Marker.FALL_START], semester_bounds[Marker.FALL_END]), "Fall " + str(year[0])
+		
+def reverse_dict(d):
+	new_dict = {}
+	for key in d:
+		if d[key] in new_dict:
+			new_dict[d[key]].append(key)
+		else:
+			new_dict[d[key]] = [key]
+	return new_dict
+
+def get_attendance_records_list():
 	members, keyholders, aliases = get_members_and_keyholders()
-	attendees = operations.get_attendees()
-	records = {}
-	for attendee in attendees:
-		if attendee not in aliases:
-			records[attendee] = get_attendance_information(attendee)
-	for alias in aliases:
-		if aliases[alias] in records:
-			records[alias] = records[aliases[alias]]
-	return [{'attendee': attendee, **records[attendee]} for attendee in records]
+	r_alias = reverse_dict(aliases)
+	alias_groups = [tuple([key, *r_alias[key]]) for key in r_alias]
+	(date_start, date_end), label = get_relevant_semester_range()
+	
+	options = {
+		"start_date": date_start,
+		"end_date": date_end
+	}
+
+	attendance_records = operations.get_attendance_records(options=options)
+	meeting_dates = operations.get_meeting_dates(options=options)
+	num_meeting_dates = len(meeting_dates)
+	
+	active_cutoff = datetime.date.today() - datetime.timedelta(days=30)
+	last_month_records = operations.get_attendance_records(options={"start_date": active_cutoff})
+
+	info = {}
+	for record in attendance_records:
+		if record["attendee"] in info:
+			info[record["attendee"]]["num_attended"] += 1
+		else:
+			info[record["attendee"]] = {"num_attended": 1}
+
+	for record in last_month_records:
+		if record["attendee"] in info:
+			info[record["attendee"]]["active"] = True
+		else:
+			info[record["attendee"]] = {"num_attended": 0, "active": True}
+	
+	for group in alias_groups:
+		record = {"num_attended": 0, "active": False}
+		for attendee in group:
+			if attendee in info:
+				record["num_attended"] += info[attendee]["num_attended"]
+				record["active"] = record["active"] or ("active" in info[attendee] and info[attendee]["active"])
+
+
+		for attendee in group:
+			info[attendee] = record
+	
+	for attendee in info:
+		if num_meeting_dates:
+			info[attendee]["percent"] = round(info[attendee]["num_attended"]*100/num_meeting_dates,1) 
+		else:
+			info[attendee]["percent"] = "N/A"
+
+		if "active" not in info[attendee]:
+			info[attendee]["active"] = False
+		
+		if attendee in keyholders or attendee in aliases and aliases[attendee] in keyholders:
+			info[attendee]["attendee_type"] = "keyholder"
+		elif attendee in members or attendee in aliases and aliases[attendee] in members:
+			info[attendee]["attendee_type"] = "member"
+		else:
+			info[attendee]["attendee_type"] = "guest"
+
+	records = [{'attendee': attendee, **info[attendee]} for attendee in info]
+	records.sort(key=lambda r: r["num_attended"], reverse=True)
+	return records, label	

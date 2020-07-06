@@ -80,7 +80,7 @@ def construct_where_clause(options):
 	of options
 
 	Supported options:
-	- attendee: query for only this attendee
+	- attendee: query for only this attendee (or a list of attendees)
 	- start_date: query for meetings on this date or after
 	- end_date: query for meetings on this date or before
 	- attendee_type: query for only this type of attendee
@@ -103,10 +103,10 @@ def construct_where_clause(options):
 			values["attendee"] = options["attendee"]
 	if "start_date" in options:
 		selectors.append("meeting_date >= %(start_date)s")
-		values["start_date"] = options["start_date"]
+		values["start_date"] = str(options["start_date"])
 	if "end_date" in options:
 		selectors.append("meeting_date <= %(end_date)s")
-		values["end_date"] = options["end_date"]
+		values["end_date"] = str(options["end_date"])
 	if "attendee_type" in options:
 		selectors.append("attendee_type = %(attendee_type)s")
 		values["attendee_type"] = options["attendee_type"]
@@ -115,8 +115,8 @@ def construct_where_clause(options):
 		values["inspection_required"] = options["inspection_required"]
 
 	# AND together the where clauses
-	query_where = " AND ".join(["(" + selector + ")" for selector in selectors])
-	
+	query_where = "(" +  " AND ".join(["(" + selector + ")" for selector in selectors]) + ")"
+
 	# Add where clause if it exists
 	if query_where:
 		return "WHERE " + query_where, values
@@ -144,6 +144,7 @@ def get_attendance_records(fields=None, clauses=None, options=None):
 	if clauses is not None:
 		query += " " + " ".join(clauses)
 
+	query += ";"
 	# Get data from database
 	return get_data(query, values)
 
@@ -152,12 +153,12 @@ def get_meeting_dates(options=None):
 	"""
 	Get list of meeting dates based on a dictionary of options
 	"""
-
 	# Select meeting date from database
-	query = "SELECT meeting_date FROM attendance GROUP BY meeting_date;"
+	query = "SELECT meeting_date FROM attendance "
 	where_clause, values = construct_where_clause(options)
 	query += where_clause
-
+	query += " GROUP BY meeting_date"
+	
 	rows = get_data(query, values)
 	
 	# Meeting date is first value in tuple returned from database
