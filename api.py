@@ -334,6 +334,15 @@ def get_attendance_records_list():
 		else:
 			info[attendee]["attendee_type"] = "guest"
 
+	for member in members - keyholders:
+		if member not in info:
+			info[member] = {"active": False, "percent": 0.0, "attendee_type": "member", "num_attended": 0}
+	
+	for keyholder in keyholders:
+		if keyholder not in info:
+			info[keyholder] = {"active": False, "percent": 0.0, "attendee_type": "keyholder", "num_attended": 0}
+
 	records = [{'attendee': attendee, **info[attendee]} for attendee in info]
+	records.sort(key=lambda r: (r["attendee_type"], r["attendee"]))
 	records.sort(key=lambda r: r["num_attended"], reverse=True)
 	return records, label	
