@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 from . import operations
-from .minutes_parse_utils import get_members_and_keyholders
+from .minutes_parse_utils import get_members_and_keyholders, ATTENDEE_TYPES
 import datetime
 import json
 from enum import Enum
@@ -267,10 +267,12 @@ def get_relevant_semester_range():
 		else:
 			return (semester_bounds[Marker.FALL_START], semester_bounds[Marker.FALL_END]), "Fall " + str(year[0])
 		
-def reverse_dict(d):
+def reverse_dict(d, unique=False):
 	new_dict = {}
 	for key in d:
-		if d[key] in new_dict:
+		if unique:
+			new_dict[d[key]] = key
+		elif d[key] in new_dict:
 			new_dict[d[key]].append(key)
 		else:
 			new_dict[d[key]] = [key]
@@ -345,4 +347,39 @@ def get_attendance_records_list():
 	records = [{'attendee': attendee, **info[attendee]} for attendee in info]
 	records.sort(key=lambda r: (r["attendee_type"], r["attendee"]))
 	records.sort(key=lambda r: r["num_attended"], reverse=True)
-	return records, label	
+	return records, label
+
+def reverse_dict_of_dicts(d):
+	new_dict = {}
+	for key in d:
+		subd = d[key]
+		for subkey in subd:
+			if subkey in new_dict:
+				new_dict[subkey][key] = subd[subkey]
+			else:
+				new_dict[subkey] = {key: subd[subkey]}
+	return new_dict
+
+def get_attendance_stats():
+	fields=["meeting_date", "attendee_type", "COUNT(attendee) as attendee_count"]
+	clauses = ["GROUP BY meeting_date, attendee_type"]
+	stat_rows = operations.get_attendance_records(fields=fields, clauses=clauses)
+	
+	stats_per_date = {}
+	for row in stat_rows:
+		if row["meeting_date"] in stats_per_date:
+			stats_per_date[row["meeting_date"]][row["attendee_type"]] = row["attendee_count"]
+		else:
+			stats_per_date[row["meeting_date"]] = {row["attendee_type"]: row["attendee_count"]}
+
+	for date in stats_per_date:
+		total_count = 0
+		for attendee_type in ATTENDEE_TYPES.values():
+			if attendee_type not in stats_per_date[date]:
+				stats_per_date[date][attendee_type] = 0
+			total_count += stats_per_date[date][attendee_type]
+		stats_per_date[date]["TOTAL"] = total_count
+
+	stats_per_attendee_type = reverse_dict_of_dicts(stats_per_date)
+	
+	return stats_per_date, stats_per_attendee_type
