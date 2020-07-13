@@ -120,6 +120,11 @@ def get_attendance_information(attendee, mems=None):
 		else:
 			attendance.append((meeting_date, False))	
 
+	try:
+		last_attended = next(md for md, attended in attendance[::-1] if attended)
+	except StopIteration:
+		last_attended = None
+	
 	records_by_year = split_by_academic_year(attendance)
 	years = sorted(list(records_by_year.keys()))
 
@@ -130,7 +135,19 @@ def get_attendance_information(attendee, mems=None):
 			del records_by_year[year]
 	
 	records_by_year = { year: add_semester_markers(records_by_year[year], year) for year in records_by_year }
-	
+
+	if len(records_by_year.keys()):
+		this_year = records_by_year[years[-1]]
+		last_record_index = len(this_year) - next(i for i, rec in enumerate(this_year[::-1]) if not isinstance(rec, Marker)) - 1
+		first_record_index = last_record_index - next(i for i, rec in enumerate(this_year[:last_record_index][::-1]) if isinstance(rec, Marker)) + 1 - 1 
+		try:
+			first_attended = next(md for md, attended in this_year[first_record_index:last_record_index+1] if attended)
+		except StopIteration:
+			first_attended = None
+	else:
+		first_attended = None
+
+
 	json_records = {}
 	for year in records_by_year:
 		year_string = str(year[0]) + "-" + str(year[1])
@@ -154,7 +171,9 @@ def get_attendance_information(attendee, mems=None):
 		"by_month": split_by_month(json_records),
 		"active": is_active(json_records),
 		"total_attended": get_num_meetings_attended(json_records),
-		"attendee_type": get_attendee_type(attendee, mems=mems)
+		"attendee_type": get_attendee_type(attendee, mems=mems),
+		"last_attended": last_attended,
+		"first_attended": first_attended
 	}
 
 term_names = ["SUMMER", "FALL", "IAP", "SPRING"]
