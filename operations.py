@@ -80,11 +80,19 @@ def construct_where_clause(options):
 	of options
 
 	Supported options:
+
+	attendance table
+	================
 	- attendee: query for only this attendee (or a list of attendees)
 	- start_date: query for meetings on this date or after
 	- end_date: query for meetings on this date or before
 	- attendee_type: query for only this type of attendee
 	- inspection_required: query for only this type of inspection required
+
+	contribution table
+	==================
+	- contributor: query for only this contributor (or a list of contributors)
+	- submitter: query for only this submitter (or a list of submitters)
 	"""
 	if options is None:
 		return "", {}
@@ -92,15 +100,18 @@ def construct_where_clause(options):
 	selectors = []
 	values = {}
 
+	def one_value_or_list(key):
+		if isinstance(options[key], list):
+			selectors.append(key + " IN (" + ", ".join(["%(" + key + "_" + str(n) + ")s" for n in range(len(options[key]))]) + ")")
+			for i, attendee in enumerate(options[key]):
+				values[key + "_" + str(i)] = attendee
+		elif isinstance(options[key], str):
+			selectors.append(key + " = %(" + key + ")s")
+			values[key] = options[key]
+
 	# Construct where clause and values list from options
 	if "attendee" in options:
-		if isinstance(options["attendee"], list):
-			selectors.append("attendee IN (" + ", ".join(["%(attendee_" + str(n) + ")s" for n in range(len(options["attendee"]))]) + ")")
-			for i, attendee in enumerate(options["attendee"]):
-				values["attendee_" + str(i)] = attendee
-		elif isinstance(options["attendee"], str):
-			selectors.append("attendee = %(attendee)s")
-			values["attendee"] = options["attendee"]
+		one_value_or_list("attendee")
 	if "start_date" in options:
 		selectors.append("meeting_date >= %(start_date)s")
 		values["start_date"] = str(options["start_date"])
@@ -113,6 +124,11 @@ def construct_where_clause(options):
 	if "inspection_required" in options:
 		selectors.append("inspection_required = %(inspection_required)s")
 		values["inspection_required"] = options["inspection_required"]
+
+	if "contributor" in options:
+		one_value_or_list("contributor")
+	if "submitter" in options:
+		one_value_or_list("submitter")
 
 	# AND together the where clauses
 	query_where = "(" +  " AND ".join(["(" + selector + ")" for selector in selectors]) + ")"
@@ -176,3 +192,22 @@ def get_attendees(options=None):
 
 	rows = get_data(query, values)
 	return [row["attendee"] for row in rows]
+
+def get_contributions(options=None):
+	"""
+	Get list of contributions based on a dictionary of options
+	"""
+	
+	query = "SELECT * FROM contributions"
+	where_clause, values = construct_where_clause(options)
+	query += where_clause
+
+	return get_data(query, values)
+
+def add_contribution(contributor, project, contribution, submitter):
+	values = (contributor, project, contribution, submitter)
+	query = ("INSERT INTO contributions"
+			 "(contributor, project, contribution, submitter) "
+			 "values (%s, %s, %s, %s)")
+	
+	set_data(query, values)
