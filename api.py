@@ -402,3 +402,9 @@ def get_attendance_stats():
 	stats_per_attendee_type = reverse_dict_of_dicts(stats_per_date)
 	
 	return stats_per_date, stats_per_attendee_type
+
+def get_contribution_list():
+	clauses = ["ORDER BY submission_time DESC"]
+
+	contributions = operations.get_contributions(clauses=clauses)
+	return contributions

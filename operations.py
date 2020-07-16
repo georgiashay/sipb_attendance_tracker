@@ -193,15 +193,24 @@ def get_attendees(options=None):
 	rows = get_data(query, values)
 	return [row["attendee"] for row in rows]
 
-def get_contributions(options=None):
+def get_contributions(options=None, fields=None, clauses=None):
 	"""
 	Get list of contributions based on a dictionary of options
-	"""
+	"""	
+	field_string = "*"
+	if fields is not None:
+		field_string = ", ".join(fields)
+
+	query = "SELECT " + field_string + " FROM contributions "
 	
-	query = "SELECT * FROM contributions"
 	where_clause, values = construct_where_clause(options)
 	query += where_clause
 
+	if clauses is not None:
+		query += " " + " ".join(clauses)
+
+	query += ";"
+	# Get data from database
 	return get_data(query, values)
 
 def add_contribution(contributor, project, contribution, submitter):
