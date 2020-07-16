@@ -88,7 +88,7 @@ def add_semester_markers(records, year):
 	
 	return records
 
-def get_attendance_information(attendee, mems=None):
+def get_all_aliases(attendee, mems=None):
 	if mems is None:
 		members, keyholders, aliases = get_members_and_keyholders()
 	else:
@@ -98,6 +98,11 @@ def get_attendance_information(attendee, mems=None):
 		attendee_names.append(aliases[attendee])
 	elif attendee in aliases.values():
 		attendee_names.extend(alias for alias in aliases if aliases[alias] == attendee)
+
+	return attendee_names
+
+def get_attendance_information(attendee, mems=None):
+	attendee_names = get_all_aliases(attendee)
 	
 	options = {
 		"attendee": attendee_names
@@ -407,4 +412,13 @@ def get_contribution_list():
 	clauses = ["ORDER BY submission_time DESC"]
 
 	contributions = operations.get_contributions(clauses=clauses)
+	return contributions
+
+def get_contributions_for(contributor):
+	contributor_names = get_all_aliases(contributor)
+	options = {
+		"contributor": contributor_names
+	}
+	clauses = ["ORDER BY submission_time DESC"]
+	contributions = operations.get_contributions(options=options, clauses=clauses)
 	return contributions
