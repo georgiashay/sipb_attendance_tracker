@@ -130,6 +130,10 @@ def construct_where_clause(options):
 	if "submitter" in options:
 		one_value_or_list("submitter")
 
+	if "project_name" in options:
+		selectors.append("project_name = %(project_name)s")
+		values["project_name"] = options["project_name"]
+
 	# AND together the where clauses
 	query_where = "(" +  " AND ".join(["(" + selector + ")" for selector in selectors]) + ")"
 
@@ -218,5 +222,36 @@ def add_contribution(contributor, project, contribution, submitter):
 	query = ("INSERT INTO contributions"
 			 "(contributor, project, contribution, submitter) "
 			 "values (%s, %s, %s, %s)")
+	
+	set_data(query, values)
+
+def get_projects(options=None, fields=None, clauses=None):
+	"""
+	Get projects from a list of options
+	"""
+	field_string = "*"
+	if fields is not None:
+		field_string = ", ".join(fields)
+
+	query = "SELECT " + field_string + " FROM projects "
+	
+	where_clause, values = construct_where_clause(options)
+	query += where_clause
+
+	if clauses is not None:
+		query += " " + " ".join(clauses)
+
+	query += ";"
+	# Get data from database
+	return get_data(query, values)
+
+def add_project(name):
+	"""
+	Add a project with a given name
+	"""
+	values = (name,)
+	query = ("INSERT INTO projects"
+				"(project_name) "
+				"values (%s)")
 	
 	set_data(query, values)

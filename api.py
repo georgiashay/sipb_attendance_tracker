@@ -422,3 +422,11 @@ def get_contributions_for(contributor):
 	clauses = ["ORDER BY submission_time DESC"]
 	contributions = operations.get_contributions(options=options, clauses=clauses)
 	return contributions
+
+def get_all_projects():
+	clauses = ["ORDER BY project_name INC"]
+	projects = operations.get_projects(clauses=clauses)
+	return projects
+
+def add_project(name):
+	operations.add_project(name)
