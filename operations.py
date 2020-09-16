@@ -207,6 +207,8 @@ def get_contributions(options=None, fields=None, clauses=None):
 
 	query = "SELECT " + field_string + " FROM contributions "
 	
+	query += " LEFT JOIN projects on projects.project_id = contributions.project_id "
+	
 	where_clause, values = construct_where_clause(options)
 	query += where_clause
 
@@ -220,7 +222,7 @@ def get_contributions(options=None, fields=None, clauses=None):
 def add_contribution(contributor, project, contribution, submitter):
 	values = (contributor, project, contribution, submitter)
 	query = ("INSERT INTO contributions"
-			 "(contributor, project, contribution, submitter) "
+			 "(contributor, project_id, contribution, submitter) "
 			 "values (%s, %s, %s, %s)")
 	
 	set_data(query, values)
@@ -255,3 +257,13 @@ def add_project(name):
 				"values (%s)")
 	
 	set_data(query, values)
+
+
+def get_project_id(name):
+	"""
+	Gets ID of existing project
+	"""
+	values = (name,)
+	query = "SELECT project_id FROM projects WHERE project_name = %s"
+	
+	return get_data(query, values)[0]["project_id"]
