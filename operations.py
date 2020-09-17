@@ -247,14 +247,14 @@ def get_projects(options=None, fields=None, clauses=None):
 	# Get data from database
 	return get_data(query, values)
 
-def add_project(name):
+def add_project(name, color):
 	"""
-	Add a project with a given name
+	Add a project with a given name and color
 	"""
-	values = (name,)
+	values = (name, color)
 	query = ("INSERT INTO projects"
-				"(project_name) "
-				"values (%s)")
+				"(project_name, project_color) "
+				"values (%s, %s)")
 	
 	set_data(query, values)
 
